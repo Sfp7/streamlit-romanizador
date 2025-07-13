@@ -3,7 +3,7 @@ import re
 import pykakasi
 import streamlit.components.v1 as components
 
-# Inicializar kakasi
+# Configurar pykakasi
 kks = pykakasi.kakasi()
 kks.setMode("H", "a")
 kks.setMode("K", "a")
@@ -32,58 +32,71 @@ def process_lyrics_text(text):
                 output_lines.append("")
     return "\n".join(output_lines)
 
+# Inicializar estado
+if "pasted" not in st.session_state:
+    st.session_state.pasted = False
+if "copied" not in st.session_state:
+    st.session_state.copied = False
+
 # Título
 st.title("Japanese Lyrics Romanizer")
-
-st.write("You can upload a `.txt` lyrics file or paste the lyrics manually below:")
+st.write("You can upload a `.txt` file or paste lyrics manually below:")
 
 # Uploader
 uploaded_file = st.file_uploader("Upload a lyrics file (.txt)", type=["txt"])
 
-# Input title and paste aligned horizontally
+# Título + botón de pegar alineado
 col1, col2 = st.columns([6, 1])
 with col1:
     st.markdown("### Paste lyrics manually")
 with col2:
-    if st.button("📋 Paste from clipboard"):
+    if st.button("📋 Paste"):
+        st.session_state.pasted = True
         components.html("""
             <script>
             navigator.clipboard.readText().then(text => {
-                const ta = window.parent.document.querySelectorAll('textarea')[0];
-                ta.value = text;
-                ta.dispatchEvent(new Event('input', { bubbles: true }));
+                const textarea = window.parent.document.querySelectorAll('textarea')[0];
+                textarea.value = text;
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
             });
             </script>
         """, height=0)
 
-# Text input
+# Mostrar mensaje de feedback
+if st.session_state.pasted:
+    st.success("✅ Pasted from clipboard!")
+
+# Input
 input_text = ""
 if uploaded_file is not None:
     input_text = uploaded_file.read().decode("utf-8")
 else:
     input_text = st.text_area("", value="", key="lyrics_input", height=200)
 
-# Process
+# Procesar al hacer click
 if st.button("Romanize Lyrics") and input_text.strip():
     romanized = process_lyrics_text(input_text)
 
-    # Output title + copy aligned
+    # Título + botón copiar alineados
     col1, col2 = st.columns([6, 1])
     with col1:
         st.markdown("### Romanized Lyrics")
     with col2:
-        if st.button("📄 Copy to clipboard"):
+        if st.button("📄 Copy"):
+            st.session_state.copied = True
             components.html(f"""
                 <script>
                 navigator.clipboard.writeText(`{romanized}`);
                 </script>
             """, height=0)
-            st.success("Copied to clipboard!")
 
-    # Result textarea
+    if st.session_state.copied:
+        st.success("✅ Copied to clipboard!")
+
+    # Mostrar resultado
     st.text_area("Result", romanized, height=500, key="output_text")
 
-    # Download button
+    # Descargar
     st.download_button(
         "Download romanized lyrics",
         romanized,
