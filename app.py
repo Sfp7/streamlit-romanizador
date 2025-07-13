@@ -12,11 +12,9 @@ kks.setMode("r", "Hepburn")  # Use Hepburn romanization
 kks.setMode("s", True)  # Add spaces
 converter = kks.getConverter()
 
-# Convert line to romaji
 def romanize_lyrics(lyrics):
     return converter.do(lyrics)
 
-# Romanize all lines with or without timestamp
 def process_lyrics_text(text):
     output_lines = []
     for line in text.splitlines():
@@ -34,55 +32,47 @@ def process_lyrics_text(text):
                 output_lines.append("")
     return "\n".join(output_lines)
 
-# PAGE UI
+# PAGE START
 st.title("Japanese Lyrics Romanizer")
 
 st.write("You can upload a `.txt` lyrics file or paste the lyrics manually below:")
 
-# File uploader comes first
+# Upload first
 uploaded_file = st.file_uploader("Upload a lyrics file (.txt)", type=["txt"])
 
-# Paste from clipboard
-st.markdown("### Paste lyrics manually")
-paste = st.button("📋 Paste from clipboard")
+# Title and paste button inline
+st.markdown("""
+<div style="display: flex; justify-content: space-between; align-items: center;">
+  <h3 style="margin-bottom: 0;">Paste lyrics manually</h3>
+  <button onclick="navigator.clipboard.readText().then(text => {
+    const ta = window.parent.document.querySelector('textarea');
+    ta.value = text;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  })">📋 Paste from clipboard</button>
+</div>
+""", unsafe_allow_html=True)
 
 input_text_key = "lyrics_input"
-if paste:
-    components.html("""
-        <script>
-        navigator.clipboard.readText().then(text => {
-            const streamlitInput = window.parent.document.querySelectorAll('textarea')[0];
-            streamlitInput.value = text;
-            streamlitInput.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-        </script>
-    """, height=0)
-
-# Show text input
 input_text = ""
+
 if uploaded_file is not None:
     input_text = uploaded_file.read().decode("utf-8")
 else:
     input_text = st.text_area("", value="", key=input_text_key, height=200)
 
-# Romanize button
+# Process text
 if st.button("Romanize Lyrics") and input_text.strip():
     romanized = process_lyrics_text(input_text)
 
-    # Output section with title and copy button inline
-    col1, col2 = st.columns([6, 1])
-    with col1:
-        st.subheader("Romanized Lyrics")
-    with col2:
-        if st.button("📄 Copy to clipboard"):
-            components.html(f"""
-                <script>
-                navigator.clipboard.writeText(`{romanized}`);
-                </script>
-            """, height=0)
-            st.success("Copied to clipboard!")
+    # Header with copy button inline
+    st.markdown("""
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin-bottom: 0;">Romanized Lyrics</h3>
+      <button onclick="navigator.clipboard.writeText(document.querySelector('textarea[aria-label=Result]').value)">📄 Copy to clipboard</button>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.text_area("Result", romanized, height=400, key="output_text")
+    st.text_area("Result", romanized, height=500, key="output_text")  # Increased height
 
     # Download button
     st.download_button(
@@ -91,4 +81,3 @@ if st.button("Romanize Lyrics") and input_text.strip():
         file_name="romanized_lyrics.txt",
         mime="text/plain",
     )
-
